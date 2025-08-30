@@ -1,0 +1,61 @@
+const int analogPins[4] = {A2, A3, A4, A5};
+const int greenLedPin = 7;
+const int redLedPin = 8; 
+const float R1 = 390000.0;  // 390kΩ
+const float R2 = 68000.0;   // 68kΩ
+const float dividerRatio = (R1 + R2) / R2; // Scaling factor
+const float adcRefVoltage = 5.0; 
+const int adcResolution = 1023; 
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(greenLedPin, OUTPUT);
+  pinMode(redLedPin, OUTPUT);
+  digitalWrite(greenLedPin, LOW);
+  digitalWrite(redLedPin, LOW);
+  Serial.println("6-S LFP Cell Sequence Detector");
+}
+
+void loop() {
+  float tapVoltages[4];
+  
+  // Read and scale each tap voltage
+  for (int i = 0; i < 4; i++) {
+    int adcValue = analogRead(analogPins[i]);
+    float dividedVoltage = (adcValue * adcRefVoltage) / adcResolution;
+    tapVoltages[i] = dividedVoltage * dividerRatio;
+  }
+  
+  // Print tap voltages
+  Serial.println("\nTap Voltages:");
+  for (int i = 0; i < 4; i++) {
+    Serial.print("Tap ");
+    Serial.print(i+1);
+    Serial.print(": ");
+    Serial.print(tapVoltages[i], 2);
+    Serial.println(" V");
+  }
+  
+  // Check if tap voltages are strictly increasing
+  bool sequenceValid = true;
+  for (int i = 1; i < 4; i++) {
+    if (tapVoltages[i] <= tapVoltages[i-1]) {
+      sequenceValid = false;
+      break;
+    }
+  }
+  
+  // Control LEDs based on sequence validity
+  if (sequenceValid) {
+    digitalWrite(greenLedPin, HIGH);
+    digitalWrite(redLedPin, LOW);
+    Serial.println("Sequence OK: Cells in proper series order.");
+  } else {
+    digitalWrite(greenLedPin, LOW);
+    digitalWrite(redLedPin, HIGH);
+    Serial.println("Sequence Error:- Check connections.");
+  }
+  
+  delay(5000); 
+}
+
